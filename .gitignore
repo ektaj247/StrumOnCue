@@ -1,0 +1,37 @@
+# Downloaded dependencies (fetch with: python scripts/fetch_menagerie.py)
+third_party/
+
+# Generated files (rebuild with: python -m strum.scene)
+assets/*.xml
+outputs/
+
+# Private notes: never commit
+private/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# MuJoCo
+MUJOCO_LOG.TXT
+
+# Training runs and cluster logs (these can contain usernames and paths)
+runs/
+wandb/
+checkpoints/
+*.pt
+slurm-*.out
+slurm-*.err
+slurm/local.env
+.env
+
+# Editor and OS: share only the project's VS Code files, not personal ones
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
