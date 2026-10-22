@@ -1,0 +1,3 @@
+[submodule "external/mjlab_hand"]
+	path = external/mjlab_hand
+	url = https://github.com/ruoyiqiao/mjlab_hand.git

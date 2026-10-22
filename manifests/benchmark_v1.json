@@ -1,0 +1,949 @@
+{
+  "schema_version": 1,
+  "string_order": [
+    "G",
+    "C",
+    "E",
+    "A"
+  ],
+  "open_string_midi": [
+    67,
+    60,
+    64,
+    69
+  ],
+  "chord_frets": {
+    "C": [
+      0,
+      0,
+      0,
+      3
+    ],
+    "G": [
+      0,
+      2,
+      3,
+      2
+    ],
+    "Am": [
+      2,
+      0,
+      0,
+      0
+    ],
+    "F": [
+      2,
+      0,
+      1,
+      0
+    ]
+  },
+  "patterns": {
+    "P1": [
+      "D",
+      ".",
+      "D",
+      ".",
+      "D",
+      ".",
+      "D",
+      "."
+    ],
+    "P2": [
+      "D",
+      "U",
+      "D",
+      "U",
+      "D",
+      "U",
+      "D",
+      "U"
+    ],
+    "P3": [
+      "D",
+      ".",
+      "D",
+      "U",
+      ".",
+      "U",
+      "D",
+      "U"
+    ]
+  },
+  "tempos_bpm": [
+    70,
+    90,
+    110
+  ],
+  "counts": {
+    "train": 81,
+    "heldout_pair": 9,
+    "heldout_transition": 18
+  },
+  "cells": [
+    {
+      "id": "C_to_G_P1_70",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P1_90",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P1_110",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P2_70",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P2_90",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P2_110",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P3_70",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P3_90",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_G_P3_110",
+      "source": "C",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P1_70",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P1_90",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P1_110",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P2_70",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P2_90",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P2_110",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P3_70",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P3_90",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_Am_P3_110",
+      "source": "C",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P1_70",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P1_90",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P1_110",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P2_70",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P2_90",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P2_110",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "C_to_F_P3_70",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "C_to_F_P3_90",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "C_to_F_P3_110",
+      "source": "C",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "G_to_C_P1_70",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P1_90",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P1_110",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P2_70",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P2_90",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P2_110",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P3_70",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P3_90",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_C_P3_110",
+      "source": "G",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P1_70",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P1_90",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P1_110",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P2_70",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P2_90",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P2_110",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P3_70",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P3_90",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_Am_P3_110",
+      "source": "G",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P1_70",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P1_90",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P1_110",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P2_70",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P2_90",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P2_110",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "G_to_F_P3_70",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "G_to_F_P3_90",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "G_to_F_P3_110",
+      "source": "G",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "Am_to_C_P1_70",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P1_90",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P1_110",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P2_70",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P2_90",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P2_110",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P3_70",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P3_90",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_C_P3_110",
+      "source": "Am",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_G_P1_70",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P1_90",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P1_110",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P2_70",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P2_90",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P2_110",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P3_70",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P3_90",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_G_P3_110",
+      "source": "Am",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "Am_to_F_P1_70",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P1_90",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P1_110",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P2_70",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P2_90",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P2_110",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "Am_to_F_P3_70",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "Am_to_F_P3_90",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "Am_to_F_P3_110",
+      "source": "Am",
+      "destination": "F",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "heldout_pair"
+    },
+    {
+      "id": "F_to_C_P1_70",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P1_90",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P1_110",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P2_70",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P2_90",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P2_110",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P3_70",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P3_90",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_C_P3_110",
+      "source": "F",
+      "destination": "C",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "heldout_transition"
+    },
+    {
+      "id": "F_to_G_P1_70",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P1_90",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P1_110",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P2_70",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P2_90",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P2_110",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P3_70",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P3_90",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_G_P3_110",
+      "source": "F",
+      "destination": "G",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P1_70",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P1_90",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P1_110",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P1",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P2_70",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P2_90",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P2_110",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P2",
+      "bpm": 110,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P3_70",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 70,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P3_90",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 90,
+      "split": "train"
+    },
+    {
+      "id": "F_to_Am_P3_110",
+      "source": "F",
+      "destination": "Am",
+      "pattern": "P3",
+      "bpm": 110,
+      "split": "train"
+    }
+  ]
+}
