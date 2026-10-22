@@ -102,7 +102,7 @@ def main():
         import imageio.v2 as imageio
         renderer=mujoco.Renderer(m,height=480,width=640)
         writer=imageio.get_writer(str(a.output/'performance.mp4'),fps=25)
-    cam=mujoco.MjvCamera();cam.lookat[:]=[.19,-.10,.24];cam.distance=.85;cam.azimuth=120;cam.elevation=-30
+    cam=mujoco.MjvCamera();cam.lookat[:]=[.19,-.10,.28];cam.distance=1.10;cam.azimuth=110;cam.elevation=-35
     try:
         with context as v:
             if v:

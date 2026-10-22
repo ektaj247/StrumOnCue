@@ -6,43 +6,82 @@ import mujoco
 
 
 def visual(parent,name,kind,**attrs):
-    return ET.SubElement(parent,'geom',name=name,type=kind,contype='0',conaffinity='0',group='2',**attrs)
+    return ET.SubElement(parent,'geom',name=name,type=kind,contype='0',conaffinity='0',group='2',mass='0',**attrs)
 
 
 def add_ukulele_visuals(root):
+    """Decorative geometry only; existing instrument collisions are retained."""
     uke=root.find(".//body[@name='ukulele']")
-    # Preserve original collision geometry, hide only its rendering.
+    asset=root.find('asset')
     for name in ['body_proxy','neck']:
         uke.find(f"geom[@name='{name}']").set('rgba','0 0 0 0')
-    # Procedural extruded outline with upper/lower bouts and a waist.
-    xs=np.array([.185,.195,.215,.235,.255,.275,.300,.325,.350,.375,.395])
-    widths=np.array([.012,.036,.052,.048,.036,.046,.065,.073,.065,.042,.008])
-    outline=[(float(x),float(y)) for x,y in zip(xs,widths)]+[(float(x),float(-y)) for x,y in zip(xs[::-1],widths[::-1])]
-    n=len(outline);vertices=[(x,y,z) for z in [-.055,-.001] for x,y in outline]
-    vertices += [(float(xs.mean()),0,-.055),(float(xs.mean()),0,-.001)]
+    texture=Path(__file__).resolve().parent/'visual_assets/koa_grain.png'
+    ET.SubElement(asset,'texture',name='koa_grain',type='2d',file=str(texture))
+    ET.SubElement(asset,'material',name='koa_top',texture='koa_grain',texuniform='false',
+                  specular='.18',shininess='.22',rgba='1 1 1 1')
+    def bezier(points,n=16):
+        p=np.asarray(points,dtype=float);t=np.linspace(0,1,n,endpoint=False)[:,None]
+        return (1-t)**3*p[0]+3*(1-t)**2*t*p[1]+3*(1-t)*t*t*p[2]+t**3*p[3]
+    pieces=[[(.182,0),(.182,.028),(.201,.052),(.222,.052)],
+            [(.222,.052),(.239,.052),(.244,.034),(.260,.034)],
+            [(.260,.034),(.276,.034),(.285,.074),(.326,.074)],
+            [(.326,.074),(.365,.074),(.401,.043),(.401,0)]]
+    half=np.vstack([bezier(p) for p in pieces]+[np.array([[.401,0]])])
+    outline=np.vstack([half,half[-2:0:-1]*[1,-1]])
+    def mesh(name,points,bottom,top):
+        n=len(points);vertices=[(x,y,z) for z in [bottom,top] for x,y in points]
+        # A center within the waist's visibility region makes a fan valid.
+        center=(.260,0)
+        vertices += [(*center,bottom),(*center,top)]
+        faces=[]
+        for i in range(n):
+            j=(i+1)%n
+            faces += [(2*n,j,i),(2*n+1,n+i,n+j),(i,j,n+j),(i,n+j,n+i)]
+        uv=[((v[0]-.182)/(.401-.182),(v[1]+.074)/.148) for v in vertices]
+        ET.SubElement(asset,'mesh',name=name,
+            vertex=' '.join(str(v) for xyz in vertices for v in xyz),
+            face=' '.join(str(v) for f in faces for v in f),
+            texcoord=' '.join(str(v) for xy in uv for v in xy))
+        return name
+    visual(uke,'body_sides','mesh',mesh=mesh('smooth_body',outline,-.050,-.0015),rgba='.25 .105 .046 1')
+    visual(uke,'soundboard','mesh',mesh=mesh('smooth_top',outline,-.0015,-.0006),material='koa_top')
+    for i,(p,q) in enumerate(zip(outline,np.roll(outline,-1,axis=0))):
+        visual(uke,f'binding_{i}','capsule',fromto=f'{p[0]} {p[1]} -.0006 {q[0]} {q[1]} -.0006',
+               size='.00065',rgba='.86 .74 .51 1')
+    for name,r,z,color in [('rosette_outer',.025,.0001,'.24 .12 .05 1'),
+                            ('rosette_light',.0235,.0003,'.86 .76 .53 1'),
+                            ('rosette_inner',.022,.0005,'.25 .12 .045 1'),
+                            ('soundhole',.020,.0007,'.012 .009 .007 1')]:
+        visual(uke,name,'cylinder',pos=f'.275 0 {z}',size=f'{r} .00012',rgba=color)
+    visual(uke,'fretboard','box',pos='.10 0 -.002',size='.10 .0175 .002',rgba='.075 .042 .027 1')
+    visual(uke,'neck_wood','box',pos='.10 0 -.010',size='.10 .017 .007',rgba='.30 .135 .06 1')
+    # Rounded, tapered headstock outline (visual only).
+    head=[]
+    for angle in np.linspace(0,2*np.pi,64,endpoint=False):
+        head.append((-.033+.033*np.cos(angle),.022*np.sin(angle)))
+    # Separate convex headstock mesh to avoid relying on the body fan center.
+    n=len(head);verts=[(x,y,z) for z in [-.014,-.002] for x,y in head]
     faces=[]
+    for i in range(1,n-1):faces += [(0,i+1,i),(n,n+i,n+i+1)]
     for i in range(n):
-        j=(i+1)%n
-        faces.extend([(2*n,j,i),(2*n+1,n+i,n+j),(i,j,n+j),(i,n+j,n+i)])
-    asset=root.find('asset')
-    ET.SubElement(asset,'mesh',name='uke_visual_body_mesh',vertex=' '.join(str(v) for xyz in vertices for v in xyz),face=' '.join(str(v) for face in faces for v in face))
-    visual(uke,'uke_visual_body','mesh',mesh='uke_visual_body_mesh',rgba='.64 .34 .12 1')
-    # Faux soundhole/rosette are appearance only; no acoustic cavity claim.
-    visual(uke,'rosette','cylinder',pos='.275 0 -.0005',size='.024 .0004',rgba='.86 .69 .38 1')
-    visual(uke,'soundhole','cylinder',pos='.275 0 .0001',size='.020 .0003',rgba='.025 .017 .012 1')
-    visual(uke,'fretboard','box',pos='.10 0 -.002',size='.10 .0175 .002',rgba='.105 .055 .03 1')
-    visual(uke,'headstock','box',pos='-.031 0 -.006',size='.030 .024 .007',rgba='.36 .15 .055 1')
-    visual(uke,'nut_visual','box',pos='0 0 .001',size='.001 .018 .001',rgba='.90 .85 .68 1')
-    visual(uke,'bridge','box',pos='.377 0 -.001',size='.009 .030 .001',rgba='.12 .06 .025 1')
-    visual(uke,'saddle','box',pos='.380 0 .001',size='.001 .018 .001',rgba='.9 .85 .68 1')
-    for i,(x,y) in enumerate([(-.015,-.017),(-.045,-.017),(-.015,.017),(-.045,.017)]):
-        visual(uke,f'tuner_{i}','cylinder',pos=f'{x} {y} .004',size='.003 .006',rgba='.7 .73 .76 1')
-        visual(uke,f'tuner_button_{i}','ellipsoid',pos=f'{x} {np.sign(y)*.028} -.004',size='.005 .006 .003',rgba='.85 .85 .8 1')
+        j=(i+1)%n;faces += [(i,j,n+j),(i,n+j,n+i)]
+    ET.SubElement(asset,'mesh',name='rounded_headstock',vertex=' '.join(str(v) for xyz in verts for v in xyz),face=' '.join(str(v) for f in faces for v in f))
+    visual(uke,'headstock','mesh',mesh='rounded_headstock',rgba='.31 .14 .065 1')
+    visual(uke,'nut_visual','box',pos='0 0 .001',size='.001 .018 .001',rgba='.91 .86 .71 1')
+    visual(uke,'bridge','box',pos='.377 0 -.0006',size='.009 .030 .0012',rgba='.105 .055 .028 1')
+    visual(uke,'saddle','box',pos='.380 0 .001',size='.001 .018 .001',rgba='.92 .87 .72 1')
+    for i,(x,y) in enumerate([(-.018,-.014),(-.045,-.013),(-.018,.014),(-.045,.013)]):
+        visual(uke,f'tuner_washer_{i}','cylinder',pos=f'{x} {y} -.0005',size='.004 .0007',rgba='.67 .69 .68 1')
+        visual(uke,f'tuner_post_{i}','cylinder',pos=f'{x} {y} .003',size='.002 .004',rgba='.74 .75 .71 1')
+        visual(uke,f'tuner_button_{i}','ellipsoid',pos=f'{x} {np.sign(y)*.025} -.006',size='.004 .005 .0025',rgba='.85 .81 .68 1')
     for fret in [3,5,7,10]:
         x=.38*(1-2**(-(fret-.5)/12))
-        if x<.195:visual(uke,f'inlay_{fret}','cylinder',pos=f'{x} 0 .00015',size='.0018 .00015',rgba='.9 .85 .7 1')
-    # Brighter studio lighting improves inspection of black hands.
-    ET.SubElement(root.find('worldbody'),'light',pos='.2 -.5 .8',dir='0 .4 -1',diffuse='.8 .8 .8',ambient='.3 .3 .3',castshadow='false')
+        if x<.195:visual(uke,f'inlay_{fret}','cylinder',pos=f'{x} 0 .00015',size='.0015 .00015',rgba='.84 .83 .72 1')
+    world=root.find('worldbody')
+    for light in list(world.findall('light')):world.remove(light)
+    for pos,direction,diffuse in [('.1 -.4 1','0 .3 -1','.65 .61 .55'),('.5 .3 .8','-.2 -.3 -1','.4 .45 .5')]:
+        ET.SubElement(world,'light',pos=pos,dir=direction,diffuse=diffuse,ambient='.20 .20 .20',castshadow='false')
+    world.find("geom[@name='ground']").set('rgba','.16 .185 .20 1')
 
 
 def add_right_hand(root,repo):
