@@ -1,0 +1,154 @@
+{
+  "scope": "Initialized fixed-mount holds only; no approach, transitions, strumming, robustness, or RL.",
+  "profile": "ek",
+  "parameters": {
+    "scale_length": 0.381,
+    "nut_spread": 0.029,
+    "saddle_spread": 0.04,
+    "nut_height": 0.0016,
+    "saddle_height": 0.0054,
+    "string_radius": 0.00045,
+    "neck_width": 0.044,
+    "neck_depth": 0.02,
+    "neck_length": 0.2,
+    "n_frets": 5,
+    "press_rule": "behind_fret",
+    "press_offset": 0.003,
+    "fret_top": 0.001,
+    "fret_radius": 0.0005
+  },
+  "mujoco_version": "3.1.4",
+  "force_threshold_N": 0.01,
+  "settle_s": 0.5,
+  "required_hold_fraction": 0.95,
+  "thresholds_provisional": true,
+  "all_pass": true,
+  "chords": {
+    "C": {
+      "accepted": true,
+      "fingering": [
+        [
+          "RF",
+          "A",
+          3
+        ]
+      ],
+      "verification": {
+        "pass": true,
+        "completed": true,
+        "seconds": 60.0,
+        "hold_fraction": 1.0,
+        "unwanted_fraction": 0.0,
+        "unwanted_pairs": [],
+        "warnings": {},
+        "max_joint_drift_deg": 30.61520333555597,
+        "mean_target_forces_N": {
+          "A": 0.19757031927290866
+        }
+      },
+      "selected_deltas": {
+        "proximal_delta": 0.0,
+        "tendon_delta": 0.08
+      }
+    },
+    "Am": {
+      "accepted": true,
+      "fingering": [
+        [
+          "MF",
+          "G",
+          2
+        ]
+      ],
+      "verification": {
+        "pass": true,
+        "completed": true,
+        "seconds": 60.0,
+        "hold_fraction": 1.0,
+        "unwanted_fraction": 0.0,
+        "unwanted_pairs": [],
+        "warnings": {},
+        "max_joint_drift_deg": 30.61899455892724,
+        "mean_target_forces_N": {
+          "G": 0.2184573828707675
+        }
+      },
+      "selected_deltas": {
+        "proximal_delta": 0.0,
+        "tendon_delta": 0.0
+      }
+    },
+    "F": {
+      "accepted": true,
+      "fingering": [
+        [
+          "MF",
+          "G",
+          2
+        ],
+        [
+          "FF",
+          "E",
+          1
+        ]
+      ],
+      "verification": {
+        "pass": true,
+        "completed": true,
+        "seconds": 60.0,
+        "hold_fraction": 1.0,
+        "unwanted_fraction": 0.0,
+        "unwanted_pairs": [],
+        "warnings": {},
+        "max_joint_drift_deg": 30.603484177153057,
+        "mean_target_forces_N": {
+          "G": 0.26866136023855913,
+          "E": 0.2604568894474383
+        }
+      },
+      "selected_deltas": {
+        "proximal_delta": 0.0,
+        "tendon_delta": 0.08
+      }
+    },
+    "G": {
+      "accepted": true,
+      "fingering": [
+        [
+          "MF",
+          "C",
+          2
+        ],
+        [
+          "RF",
+          "E",
+          3
+        ],
+        [
+          "FF",
+          "A",
+          2
+        ]
+      ],
+      "verification": {
+        "pass": true,
+        "completed": true,
+        "seconds": 60.0,
+        "hold_fraction": 0.993815333938355,
+        "unwanted_fraction": 0.0,
+        "unwanted_pairs": [],
+        "warnings": {},
+        "max_joint_drift_deg": 30.455204965732385,
+        "mean_target_forces_N": {
+          "C": 0.1802518633587234,
+          "E": 0.17635295502328013,
+          "A": 0.7724638016278335
+        }
+      },
+      "selected_deltas": {
+        "proximal_delta": 0.0,
+        "tendon_delta": 0.04
+      }
+    }
+  }
+}
