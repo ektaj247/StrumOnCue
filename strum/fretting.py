@@ -24,9 +24,12 @@ def save_json(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def load(scene):
+def load(scene, presentation=None):
     scene = scene.resolve()
     root = ET.parse(scene).getroot()
+    if presentation is not None:
+        from .presentation import decorate
+        decorate(root, presentation, ROOT)
     compiler = root.find('compiler')
     # Supply assets through MuJoCo's in-memory filesystem. Saved XML stays
     # portable; MuJoCo no longer needs to open these mesh paths itself.
@@ -279,11 +282,17 @@ def verify(a):
 
 def view(a):
     from mujoco import viewer
-    m, d = load(a.scene)
+    params = None
+    if a.polished:
+        meta = json.loads((a.scene.parent.parent / 'summary.json').read_text())
+        params = profile(meta['profile'])
+        if params.to_dict() != meta['parameters']:
+            raise ValueError('Geometry parameters changed')
+    m, d = load(a.scene, presentation=params)
     controls = d.ctrl.copy()
     with viewer.launch_passive(m, d) as window:
-        window.cam.lookat[:] = [.08, -.12, .20]
-        window.cam.distance = .55; window.cam.azimuth = 120; window.cam.elevation = -25
+        from .presentation import set_camera
+        set_camera(window.cam, a.camera)
         while window.is_running():
             start = time.monotonic()
             for _ in range(10):
@@ -308,8 +317,19 @@ def main():
     t.add_argument('--run', type=Path, required=True)
     t.add_argument('--output', type=Path, required=True)
     t.add_argument('--seconds', type=float, default=60.)
+    x = commands.add_parser('transition')
+    x.add_argument('--run', type=Path, required=True)
+    x.add_argument('--output', type=Path, required=True)
+    x.add_argument('--cycles', type=int, default=10)
+    x.add_argument('--view', action='store_true')
+    x.add_argument('--polished', action='store_true')
+    x.add_argument('--camera', choices=['overview', 'fretting'], default='overview')
+    x.add_argument('--approach-proximal', type=float, default=0.)
+    x.add_argument('--approach-tendon', type=float, default=2.)
     v = commands.add_parser('view')
     v.add_argument('--scene', type=Path, required=True)
+    v.add_argument('--polished', action='store_true')
+    v.add_argument('--camera', choices=['overview', 'fretting'], default='overview')
     a = parser.parse_args()
     if a.command == 'calibrate':
         if not (1 <= a.screen_seconds <= a.verify_seconds): parser.error('Require 1 <= screen <= verify seconds')
@@ -318,6 +338,10 @@ def main():
     elif a.command == 'verify':
         if a.seconds < 1: parser.error('Require seconds >= 1')
         verify(a)
+    elif a.command == 'transition':
+        if a.cycles < 1: parser.error('cycles must be positive')
+        from .transitions import run
+        run(a)
     else:
         try: view(a)
         except KeyboardInterrupt: pass
