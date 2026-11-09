@@ -24,12 +24,8 @@ def save_json(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
-def load(scene, presentation=None):
-    scene = scene.resolve()
-    root = ET.parse(scene).getroot()
-    if presentation is not None:
-        from .presentation import decorate
-        decorate(root, presentation, ROOT)
+def compile_root(root, scene):
+    root = ET.fromstring(ET.tostring(root, encoding='unicode'))
     compiler = root.find('compiler')
     # Supply assets through MuJoCo's in-memory filesystem. Saved XML stays
     # portable; MuJoCo no longer needs to open these mesh paths itself.
@@ -52,8 +48,16 @@ def load(scene, presentation=None):
             assets[virtual_name] = contents
             node.set('file', virtual_name)
         compiler.set(field, '')
-    m = mujoco.MjModel.from_xml_string(
+    return mujoco.MjModel.from_xml_string(
         ET.tostring(root, encoding='unicode'), assets=assets)
+
+def load(scene, presentation=None):
+    scene = scene.resolve()
+    root = ET.parse(scene).getroot()
+    if presentation is not None:
+        from .presentation import decorate
+        decorate(root, presentation, ROOT)
+    m = compile_root(root, scene)
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, 0)
     mujoco.mj_forward(m, d)
@@ -63,7 +67,7 @@ def load(scene, presentation=None):
 def contact_forces(m, d, p, fingering):
     uke = m.body('ukulele').id
     hand = {i for i in range(m.ngeom)
-            if m.body(int(m.geom_bodyid[i])).name.startswith('lh_')}
+            if m.body(int(m.geom_bodyid[i])).name.startswith(('lh_', 'strum_rh_'))}
     assignments = {frozenset((m.geom('string_' + s).id,
                    m.geom('lh_' + f.lower() + 'distal_geom_1').id)): (s, n)
                    for f, s, n in fingering}
@@ -323,6 +327,7 @@ def main():
     x.add_argument('--cycles', type=int, default=10)
     x.add_argument('--view', action='store_true')
     x.add_argument('--polished', action='store_true')
+    x.add_argument('--two-hands', action='store_true')
     x.add_argument('--camera', choices=['overview', 'fretting'], default='overview')
     x.add_argument('--approach-proximal', type=float, default=0.)
     x.add_argument('--approach-tendon', type=float, default=2.)

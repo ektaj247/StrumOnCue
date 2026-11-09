@@ -4,11 +4,12 @@ import csv
 import hashlib
 import json
 import time
+import xml.etree.ElementTree as ET
 
 import mujoco
 import numpy as np
 
-from .fretting import load, contact_forces, save_json
+from .fretting import ROOT, load, contact_forces, save_json
 from .ukulele import profile
 
 
@@ -41,6 +42,13 @@ def run(a):
                   'jnt_range','dof_damping','actuator_gainprm','actuator_biasprm','actuator_ctrlrange','actuator_forcerange']:
         np.testing.assert_allclose(getattr(m,field),getattr(other,field),rtol=0,atol=1e-12,err_msg=field)
     controls = {c: data[c].ctrl.copy() for c in models}
+    composed = None
+    if a.two_hands:
+        from .bimanual import compose
+        m,d,composed = compose(a.run/'C/scene.xml', ROOT, p if a.polished else None)
+        for c, left in list(controls.items()):
+            controls[c] = d.ctrl.copy()
+            controls[c][:len(left)] = left
     controls['clear'] = controls['C'].copy()
     for finger in ['FF','MF','RF','LF']:
         for joint, value in [('J4',0.),('J3',1.2),('J0',1.4)]:
@@ -81,9 +89,15 @@ def run(a):
     ]
     schedule = [(0,('initial_C',3.,'C','C'))]
     schedule += [(cycle,phase) for cycle in range(1,a.cycles+1) for phase in sequence]
+    strummer = None
+    if a.two_hands:
+        from .strumming import Strummer
+        strummer = Strummer(m,d,p,schedule)
     a.output.mkdir(parents=True,exist_ok=False)
+    if composed is not None:
+        ET.ElementTree(composed).write(a.output/'scene.xml',encoding='unicode')
     report = {'scope':'Scripted continuous C-Am-C transitions on fixed mount; no strumming, RL, generalization, or robustness claim.',
-              'presentation_only':a.polished,'profile':source['profile'],'mujoco_version':mujoco.__version__,'source_scene_sha256':hashes,
+              'two_hands':a.two_hands,'presentation_only':a.polished,'profile':source['profile'],'mujoco_version':mujoco.__version__,'source_scene_sha256':hashes,
               'rollout_reset_count':1,'state_overwrites_after_start':0,'cycles_requested':a.cycles,
               'force_threshold_N':.01,'required_hold_fraction':.95,'hold_settle_s':.5,
               'thresholds_provisional':True,'approach_proximal':a.approach_proximal,'approach_tendon':a.approach_tendon,
@@ -115,10 +129,12 @@ def run(a):
                 blend = u*u*(3-2*u) if moving else 1.
                 with (window.lock() if window else nullcontext()):
                     d.ctrl[:] = (1-blend)*controls[src] + blend*controls[dst]
+                    if strummer: strummer.control(d)
                     mujoco.mj_step(m,d)
                     mujoco.mj_forward(m,d)
                     if not (np.isfinite(d.qpos).all() and np.isfinite(d.qvel).all()):
                         invalid=True; break
+                    if strummer: strummer.observe(d)
                     forces,bad,current = contact_forces(m,d,p,allowed)
                     pairs |= current
                     row = {'time_s':float(d.time),'cycle':cycle,'phase':name,
@@ -152,6 +168,13 @@ def run(a):
     report['cycles_passed'] = sum(c['pass'] for c in report['cycles'])
     report['simulated_seconds'] = float(d.time)
     report['screen_pass'] = len(report['phases'])==len(schedule) and all(r['pass'] for r in report['phases']) and not invalid and not report['warnings']
+    if strummer:
+        report['strumming'] = strummer.summary()
+        report['scope'] = 'Scripted two-hand C-Am-C on a fixed instrument; no RL, robustness, or generalization claim.'
+        report['screen_pass'] = report['screen_pass'] and report['strumming']['notes']['f1']==1. and report['strumming']['unexpected_upstrokes']==0
+        save_json(a.output/'expected_events.json',strummer.expected)
+        save_json(a.output/'actual_events.json',strummer.actual)
+        print('NOTES:',json.dumps(report['strumming']['notes']))
     with (a.output/'trace.csv').open('w',newline='') as file:
         if rows:
             writer=csv.DictWriter(file,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
