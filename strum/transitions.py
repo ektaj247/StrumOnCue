@@ -18,8 +18,9 @@ def run(a):
     p = profile(source['profile'])
     if p.to_dict() != source['parameters']:
         raise ValueError('Geometry changed since hold calibration')
+    route = getattr(a, 'route', None) or ['C','Am','C']
     models, data, fingers, hashes = {}, {}, {}, {}
-    for chord in ['C', 'Am']:
+    for chord in dict.fromkeys(route):
         record = source['chords'][chord]
         if not record['accepted']:
             raise ValueError('Need accepted initialized holds: ' + chord)
@@ -30,65 +31,33 @@ def run(a):
         models[chord], data[chord] = load(scene, presentation=p if a.polished else None)
         fingers[chord] = record['fingering']
         hashes[chord] = digest
-    m, d = models['C'], data['C']
-    other = models['Am']
-    if m.nq != other.nq or m.nu != other.nu:
-        raise ValueError('Hand dimensions differ')
-    for kind, count in [('joint', m.njnt), ('actuator', m.nu), ('geom', m.ngeom)]:
-        if [getattr(m,kind)(i).name for i in range(count)] != [getattr(other,kind)(i).name for i in range(count)]:
-            raise ValueError('Different model ordering: ' + kind)
-    for field in ['body_pos','body_quat','body_mass','body_inertia','geom_pos','geom_quat','geom_size',
-                  'geom_contype','geom_conaffinity','geom_friction','geom_solref','geom_solimp',
-                  'jnt_range','dof_damping','actuator_gainprm','actuator_biasprm','actuator_ctrlrange','actuator_forcerange']:
-        np.testing.assert_allclose(getattr(m,field),getattr(other,field),rtol=0,atol=1e-12,err_msg=field)
+    m, d = models[route[0]], data[route[0]]
+    for other in list(models.values())[1:]:
+        if m.nq != other.nq or m.nu != other.nu:
+            raise ValueError('Hand dimensions differ')
+        for kind, count in [('joint', m.njnt), ('actuator', m.nu), ('geom', m.ngeom)]:
+            if [getattr(m,kind)(i).name for i in range(count)] != [getattr(other,kind)(i).name for i in range(count)]:
+                raise ValueError('Different model ordering: ' + kind)
+        for field in ['body_pos','body_quat','body_mass','body_inertia','geom_pos','geom_quat','geom_size',
+                      'geom_contype','geom_conaffinity','geom_friction','geom_solref','geom_solimp',
+                      'jnt_range','dof_damping','actuator_gainprm','actuator_biasprm','actuator_ctrlrange','actuator_forcerange']:
+            np.testing.assert_allclose(getattr(m,field),getattr(other,field),rtol=0,atol=1e-12,err_msg=field)
     controls = {c: data[c].ctrl.copy() for c in models}
+    time_scale = getattr(a, 'time_scale', 1.)
+    if source.get('planner') == 'ik':
+        from .planner import Hand, plan
+        depths = {c: source['chords'][c]['press_depth_m'] for c in models}
+        sequence,schedule=plan(Hand(m,p),controls,fingers,depths,route,a.cycles,time_scale)
+    else:
+        from .tasks import plan
+        sequence,schedule=plan(m,controls,fingers,route,a.cycles,a.approach_proximal,a.approach_tendon)
     composed = None
     if a.two_hands:
         from .bimanual import compose
-        m,d,composed = compose(a.run/'C/scene.xml', ROOT, p if a.polished else None)
+        m,d,composed = compose(a.run/route[0]/'scene.xml', ROOT, p if a.polished else None)
         for c, left in list(controls.items()):
             controls[c] = d.ctrl.copy()
             controls[c][:len(left)] = left
-    controls['clear'] = controls['C'].copy()
-    for finger in ['FF','MF','RF','LF']:
-        for joint, value in [('J4',0.),('J3',1.2),('J0',1.4)]:
-            controls['clear'][m.actuator('lh_A_'+finger+joint).id] = value
-    controls['home'] = controls['clear'].copy()
-    for finger in ['FF','MF','RF','LF']:
-        controls['home'][m.actuator('lh_A_'+finger+'J0').id] = 0.
-    controls['pre_Am'] = controls['Am'].copy()
-    controls['pre_Am'][m.actuator('lh_A_MFJ0').id] = a.approach_tendon
-    controls['pre_Am'][m.actuator('lh_A_MFJ3').id] = a.approach_proximal
-    controls['land_Am'] = controls['Am'].copy()
-    controls['land_Am'][m.actuator('lh_A_MFJ3').id] = a.approach_proximal
-    controls['pre_C'] = controls['C'].copy()
-    controls['pre_C'][m.actuator('lh_A_RFJ0').id] = 1.4
-    for ctrl in controls.values():
-        limited = m.actuator_ctrllimited.astype(bool)
-        if np.any(ctrl[limited]<m.actuator_ctrlrange[limited,0]) or np.any(ctrl[limited]>m.actuator_ctrlrange[limited,1]):
-            raise ValueError('Control outside actuator limits')
-    fingers.update({'clear':[], 'home':[], 'pre_C':[], 'pre_Am':[], 'land_Am':fingers['Am']})
-    sequence = [
-        ('release_C',1.,'C','clear'),
-        ('home_before_Am',3.,'clear','home'),
-        ('recurl_before_Am',1.,'home','clear'),
-        ('clear_before_Am',1.,'clear','clear'),
-        ('align_Am',1.,'clear','pre_Am'),
-        ('lower_Am',1.,'pre_Am','land_Am'),
-        ('press_Am',1.,'land_Am','Am'),
-        ('hold_Am',5.,'Am','Am'),
-        ('unpress_Am',1.,'Am','land_Am'),
-        ('lift_Am',1.,'land_Am','pre_Am'),
-        ('release_Am',1.,'pre_Am','clear'),
-        ('home_before_C',3.,'clear','home'),
-        ('recurl_before_C',1.,'home','clear'),
-        ('clear_before_C',1.,'clear','clear'),
-        ('align_C',1.,'clear','pre_C'),
-        ('press_C',1.,'pre_C','C'),
-        ('returned_C',5.,'C','C'),
-    ]
-    schedule = [(0,('initial_C',3.,'C','C'))]
-    schedule += [(cycle,phase) for cycle in range(1,a.cycles+1) for phase in sequence]
     strummer = None
     if a.two_hands:
         from .strumming import Strummer
@@ -96,11 +65,11 @@ def run(a):
     a.output.mkdir(parents=True,exist_ok=False)
     if composed is not None:
         ET.ElementTree(composed).write(a.output/'scene.xml',encoding='unicode')
-    report = {'scope':'Scripted continuous C-Am-C transitions on fixed mount; no strumming, RL, generalization, or robustness claim.',
+    report = {'scope':'Scripted continuous chord-route transitions on fixed mount; no strumming, RL, generalization, or robustness claim.',
               'two_hands':a.two_hands,'presentation_only':a.polished,'profile':source['profile'],'mujoco_version':mujoco.__version__,'source_scene_sha256':hashes,
-              'rollout_reset_count':1,'state_overwrites_after_start':0,'cycles_requested':a.cycles,
+              'route':route,'rollout_reset_count':1,'state_overwrites_after_start':0,'cycles_requested':a.cycles,
               'force_threshold_N':.01,'required_hold_fraction':.95,'hold_settle_s':.5,
-              'thresholds_provisional':True,'approach_proximal':a.approach_proximal,'approach_tendon':a.approach_tendon,
+              'thresholds_provisional':True,'planner':source.get('planner','legacy'),'time_scale':time_scale,'approach_proximal':a.approach_proximal,'approach_tendon':a.approach_tendon,
               'rules':'Moves permit source/destination intended contacts and contact gaps. Holds require >=95% simultaneous contact after .5s; all phases require no unwanted force >=.01N over their evaluated samples.',
               'phases':[]}
     rows = []
@@ -155,7 +124,7 @@ def run(a):
                     'max_unwanted_force_N':max((r['unwanted_N'] for r in phase_rows),default=0.),
                     'unwanted_pairs':sorted(pairs)}
             report['phases'].append(item)
-            if name in ['initial_C','hold_Am','returned_C'] or not passed:
+            if name.startswith(('initial_', 'hold_')) or not passed:
                 print(json.dumps(item),flush=True)
             if not completed or invalid: break
     report['warnings'] = {str(i):int(w.number) for i,w in enumerate(d.warning) if w.number}
@@ -170,7 +139,7 @@ def run(a):
     report['screen_pass'] = len(report['phases'])==len(schedule) and all(r['pass'] for r in report['phases']) and not invalid and not report['warnings']
     if strummer:
         report['strumming'] = strummer.summary()
-        report['scope'] = 'Scripted two-hand C-Am-C on a fixed instrument; no RL, robustness, or generalization claim.'
+        report['scope'] = 'Scripted two-hand chord routes on a fixed instrument; no RL, robustness, or generalization claim.'
         report['screen_pass'] = report['screen_pass'] and report['strumming']['notes']['f1']==1. and report['strumming']['unexpected_upstrokes']==0
         save_json(a.output/'expected_events.json',strummer.expected)
         save_json(a.output/'actual_events.json',strummer.actual)
@@ -182,3 +151,4 @@ def run(a):
     print('CYCLES PASSED:',report['cycles_passed'],'/',a.cycles)
     print('TRANSITION SCREEN PASS:',report['screen_pass'])
     print('Saved',a.output/'summary.json')
+    return report

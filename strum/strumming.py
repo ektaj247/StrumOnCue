@@ -40,7 +40,7 @@ class Strummer:
         self.strokes=[];self.expected=[];self.actual=[]
         start=0.
         for cycle,(name,seconds,src,dst) in schedule:
-            if name in ['hold_Am','returned_C']:
+            if name.startswith('hold_') or name=='returned_C':
                 for beat in range(3):
                     onset=start+1.+beat*60/70
                     self.strokes.append(onset)
