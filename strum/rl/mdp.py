@@ -177,11 +177,13 @@ class ChordCommand(CommandTerm):
         self.source, self.target = zeros(torch.long), zeros(torch.long)
         self.fresh = zeros(torch.bool)
         self.forced = None
+        self.version = 0            # bumped whenever any source or target changes
+        self._restart_step = torch.full((self.num_envs,), -1, dtype=torch.long, device=self.device)
         self.since_switch = zeros()
         self.window_steps, self.window_ok = zeros(), zeros()
         self.period_unwanted = zeros(torch.bool)
         self._steps, self._ok_sum, self._periods, self._held, self._clean = zeros(), zeros(), zeros(), zeros(), zeros()
-        for name in ('chord_ok', 'transition_success', 'clean_success', 'unwanted_force'):
+        for name in ('chord_ok', 'transition_success', 'clean_success', 'unwanted_force', 'contact_overflow'):
             self.metrics[name] = zeros()
 
     @property
@@ -197,6 +199,7 @@ class ChordCommand(CommandTerm):
             start = self.forced[0][env_ids]
         self.source[env_ids] = start
         self.fresh[env_ids] = True
+        self._restart_step[env_ids] = self._env.common_step_counter
         for buffer in (self._steps, self._ok_sum, self._periods, self._held, self._clean):
             buffer[env_ids] = 0.
         return start
@@ -208,20 +211,26 @@ class ChordCommand(CommandTerm):
         return held, held & ~self.period_unwanted
 
     def _update_metrics(self) -> None:
+        # Envs reset earlier in this env step have not simulated their new
+        # episode yet; nothing measured this step belongs to it.
+        live = self._restart_step != self._env.common_step_counter
         state = contact_state(self._env)
-        self.since_switch += self._env.step_dt
-        in_window = self.time_left <= self.cfg.hold_window_s
+        self.since_switch += self._env.step_dt * live
+        in_window = (self.time_left <= self.cfg.hold_window_s) & live
         self.window_steps += in_window
         self.window_ok += in_window & state['chord_ok']
-        self.period_unwanted |= state['unwanted'] >= FORCE_THRESHOLD
-        self._steps += 1.
-        self._ok_sum += state['chord_ok']
-        self.metrics['chord_ok'][:] = self._ok_sum / self._steps
+        self.period_unwanted |= (state['unwanted'] >= FORCE_THRESHOLD) & live
+        self._steps += live
+        self._ok_sum += state['chord_ok'] & live
+        self.metrics['contact_overflow'][:] = state['overflow']
+        self.metrics['chord_ok'][:] = self._ok_sum / self._steps.clamp(min=1.)
         self.metrics['unwanted_force'][:] = state['unwanted']
         self.metrics['transition_success'][:] = self._held / self._periods.clamp(min=1.)
         self.metrics['clean_success'][:] = self._clean / self._periods.clamp(min=1.)
 
     def _resample_command(self, env_ids: torch.Tensor) -> None:
+        self.version += 1
+        _forget_substeps(self._env, env_ids)
         old = env_ids[~self.fresh[env_ids]]
         if len(old):
             held, clean = self.period_result()
@@ -297,16 +306,8 @@ def _fingertip_order(sensor) -> list[int]:
     return [names.index(f'lh_{f.lower()}distal_collision') for f in FINGERS]
 
 
-def contact_state(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
-    """Per-env contact summary under the benchmark rule, cached per step.
-
-    correct[f]: finger f presses its assigned string in its assigned fret.
-    unwanted: hand contact force that is not an assigned string contact and
-    not an assigned fingertip on the fretboard inside its own fret.
-    """
-    cache = getattr(env, '_strum_contact', None)
-    if cache is not None and cache[0] == env.common_step_counter:
-        return cache[1]
+def _measure(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
+    """Classify the contacts the sensors report right now under the current target."""
     chords = _chords(env)
     term: ChordCommand = env.command_manager.get_term('chord')
     origin = env.scene['ukulele'].data.root_link_pos_w[:, None]
@@ -325,6 +326,9 @@ def contact_state(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
     neck_fret = torch.bucketize(((neck.data.pos[:, order] - origin)[..., 0]).contiguous(), chords.edges)
     hand = env.scene[HAND_SENSOR].data
     total = (hand.force[..., 0].abs() * (hand.found > 0)).sum(dim=-1)
+    # found holds the number of matching contacts; more than the sensor keeps
+    # means some contact was not measured.
+    overflow = hand.found.max(dim=-1).values > hand.found.shape[-1]
 
     def allowed(chord):
         string, want = chords.string[chord], chords.fret[chord]             # [envs, finger]
@@ -333,17 +337,70 @@ def contact_state(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
         return good, (string >= 0) & (neck_fret == want)
 
     good, good_neck = allowed(term.target)
-    correct = (force * good).sum(dim=-1) >= FORCE_THRESHOLD
+    assigned = chords.assigned[term.target]
+    correct = ((force * good).sum(dim=-1) >= FORCE_THRESHOLD) & assigned
     grace = (term.since_switch < term.cfg.source_grace_s)[:, None]
     old, old_neck = allowed(term.source)
     permitted = good | (old & grace[..., None])
     permitted_neck = good_neck | (old_neck & grace)
     unwanted = (total - (force * permitted).sum(dim=(1, 2)) - (neck_force * permitted_neck).sum(dim=1)).clamp(min=0.)
-    assigned = chords.assigned[term.target]
-    state = {'force': force, 'neck_force': neck_force, 'correct': correct & assigned, 'assigned': assigned,
-             'unwanted': unwanted,
-             'chord_ok': (correct | ~assigned).all(dim=1) & (unwanted < FORCE_THRESHOLD)}
-    env._strum_contact = (env.common_step_counter, state)
+    return {'force': force, 'neck_force': neck_force, 'correct': correct, 'assigned': assigned,
+            'unwanted': unwanted, 'overflow': overflow}
+
+
+def _substeps(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
+    if not hasattr(env, '_strum_substeps'):
+        env._strum_substeps = {'unwanted': torch.zeros(env.num_envs, device=env.device),
+                               'overflow': torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)}
+    return env._strum_substeps
+
+
+def _forget_substeps(env: ManagerBasedRlEnv, env_ids) -> None:
+    seen = _substeps(env)
+    seen['unwanted'][env_ids] = 0.
+    seen['overflow'][env_ids] = False
+
+
+def substep_unwanted(env: ManagerBasedRlEnv) -> torch.Tensor:
+    """Per-physics-substep check, so a contact shorter than one policy step still counts.
+
+    Registered as a per-substep metric. Keeps the largest unwanted force seen
+    during the env step for contact_state(); the logged value is the fraction
+    of substeps with unwanted contact.
+    """
+    seen = _substeps(env)
+    if (env._sim_step_counter - 1) % env.cfg.decimation == 0:
+        _forget_substeps(env, slice(None))
+    now = _measure(env)
+    seen['unwanted'] = torch.maximum(seen['unwanted'], now['unwanted'])
+    seen['overflow'] |= now['overflow']
+    return (now['unwanted'] >= FORCE_THRESHOLD).float()
+
+
+def contact_state(env: ManagerBasedRlEnv) -> dict[str, torch.Tensor]:
+    """Per-env contact summary under the benchmark rule.
+
+    correct[f]: finger f presses its assigned string in its assigned fret.
+    unwanted: largest hand contact force during this env step that is neither
+    an assigned string contact nor an assigned fingertip on the fretboard
+    inside its own fret. overflow: the hand had more contacts than the sensor
+    keeps, so the measurement is incomplete; treated as not ok.
+
+    Cached per env step and per command version: a reset or target change
+    inside the step recomputes it against the new target.
+    """
+    term: ChordCommand = env.command_manager.get_term('chord')
+    key = (env.common_step_counter, term.version)
+    cache = getattr(env, '_strum_contact', None)
+    if cache is not None and cache[0] == key:
+        return cache[1]
+    state = _measure(env)
+    seen = _substeps(env)
+    state['unwanted'] = torch.maximum(state['unwanted'], seen['unwanted'])
+    state['overflow'] = state['overflow'] | seen['overflow']
+    state['chord_ok'] = ((state['correct'] | ~state['assigned']).all(dim=1)
+                         & (state['unwanted'] < FORCE_THRESHOLD) & ~state['overflow'])
+    env._strum_contact = (key, state)
     return state
 
 

@@ -1,6 +1,8 @@
 # RL stage 1: goal-conditioned chord fretting
 
-Status 2026-11-09: environment built and checked on CPU. No policy has been trained yet. Reward weights and PPO settings are first choices, not tuned.
+Status 2026-11-10: environment built and checked on CPU; contact bookkeeping revised after an external code review (see "Review fixes"). No policy has been trained yet. Reward weights and PPO settings are first choices, not tuned.
+
+The hand is a **modified Shadow Hand model**: the upstream left hand plus a J1 = J2 coupling on each of the four fingers. Results here are for that coupled model, not the unchanged upstream hand.
 
 ## What is being learned
 
@@ -16,11 +18,20 @@ There are twelve directed chord changes among C, Am, F and G. Training uses ten.
 
 ## Success rule
 
-Same contact rule as the scripted evaluation: 0.01 N threshold; every assigned fingertip on its string inside its fret; no unwanted hand contact of 0.01 N or more; an assigned fingertip may touch the fretboard inside its own fret. For one second after a target change, contacts belonging to the previous chord are not counted as unwanted.
+Same contact rule as the scripted evaluation: 0.01 N threshold; every assigned fingertip on its string inside its fret; no unwanted hand contact of 0.01 N or more. For one second after a target change, contacts belonging to the previous chord are not counted as unwanted.
+
+Fretboard contact (rule adopted 2026-11-09): the fingertip of an assigned finger may touch the fretboard anywhere across the neck's width, as long as the contact lies between the two fret lines of its assigned fret. It is not restricted to a strip beside the assigned string. Touching any string other than the assigned one is still unwanted, so the wider region does not permit muting a neighbour. Results before 2026-11-09 used the stricter rule in which any neck contact was unwanted.
 
 A chord change is **held** when the target chord is correct for at least 95% of the final second before the next change, and **clean** when in addition no unwanted contact occurred at any time in that period.
 
-Differences from the scripted evaluation, all in the direction of an approximation: contact forces come from mjlab contact sensors (strongest contact per fingertip and string; the eight strongest contacts on the whole hand), and the simulation runs in MuJoCo Warp at a 4 ms step with the implicitfast integrator instead of native MuJoCo at 2 ms.
+How contact is measured here, and how that differs from the scripted evaluation:
+
+- Unwanted force is checked at every physics substep (4 ms) and the largest value in the policy step is used, so a contact shorter than one policy step still counts. Whether the chord is correct is sampled once per policy step (20 ms).
+- Forces come from mjlab contact sensors: the strongest contact per fingertip and string, and the 16 strongest contacts on the whole hand. Unwanted force is the hand total minus the permitted fingertip contacts. If the hand ever has more than 16 contacts the step is flagged as overflow and counted as not correct; `Metrics/chord/contact_overflow` logs how often. Typical counts are 1 to 3.
+- A fingertip with two contact points on its own string has only the stronger one recognised as permitted; the other is counted as unwanted. This errs on the strict side.
+- The simulation is MuJoCo Warp at a 4 ms step with the implicitfast integrator, against native MuJoCo at 2 ms for the scripted evaluation.
+
+Numbers reported for a final policy should be confirmed by replaying it in native MuJoCo under `strum.fretting`'s evaluator, which sees every contact.
 
 ## Reward
 
@@ -38,21 +49,30 @@ The critic additionally sees fingertip-to-target errors, contact forces and time
 
 ## Files
 
-- `assets/rl_chords_v1.json`: chord table (settled joint state, holding command and fingertip positions per chord, mount pose, train and held-out pairs). Regenerate with `python -m strum.export_chords --run <calibrated run> --output assets/rl_chords_v1.json` (runs in the local MuJoCo environment; mjlab is not needed).
+- `assets/rl_chords_v1.json`: chord table (settled joint state, holding command and fingertip positions per chord, mount pose, train and held-out pairs). Regenerate with `python -m strum.rl.export_chords --run <calibrated run> --output assets/rl_chords_v1.json`.
 - `strum/rl/scene.py`: hand (with distal coupling and pad markers) and ukulele entities.
 - `strum/rl/mdp.py`: action, chord command, contact bookkeeping, observations, rewards.
 - `strum/rl/env_cfg.py`: environment and PPO configuration. Tasks `Strum-Fret-Shadow` and `Strum-Fret-Shadow-Heldout`.
+- `scripts/rl_selfcheck.py`: five checks of the contact bookkeeping; `slurm/fret_train.sbatch` runs it before training and stops if any fails.
 - `scripts/rl_train.py`, `scripts/rl_play.py`, `scripts/rl_eval.py`, `slurm/fret_train.sbatch`, `slurm/fret_eval.sbatch`.
 
-## Checks run (CPU, mjlab 1.4.0, MuJoCo Warp 3.8.1, 2026-11-09)
+## Checks run (CPU, mjlab 1.4.0, MuJoCo Warp 3.8.1, 2026-11-10)
 
 - Ukulele collision geometry is identical to the calibrated native scene. After reset, fingertip markers match the chord table to 0.0001 mm.
-- Holding each chord's calibrated command through the action interface: chord correct 100% of the time for all four chords.
-- Replaying the scripted planner through the action interface on the ten training changes (4 rollouts each): held 100%, clean 100% from exact starts; held 100%, clean 97.5% with the training start noise. The task is solvable through this action space and the in-environment success measure agrees with the scripted one.
-- PPO ran four iterations with 64 environments and saved checkpoints; `rl_eval.py` loaded one and scored it 0%, as expected for an untrained policy.
+- `scripts/rl_selfcheck.py`: all five checks pass. With the pre-review bookkeeping restored, checks 2 and 3 fail, so they do detect the faults they are meant to.
+- Replaying the scripted planner through the action interface on the ten training changes (4 rollouts each, exact starts), with unwanted contact now checked every substep: held 100%, clean 100%. Before the review fixes the same replay with the training start noise gave held 100%, clean 97.5%; that noisy case has not been re-run.
+- PPO ran two iterations with 48 environments and saved checkpoints; `rl_eval.py` loaded one and scored it 0%, as expected for an untrained policy, with 0 early terminations.
 - Random actions for 120 steps: at most 53 constraints in one world (limit 256).
 
 Not checked: learning itself, GPU speed, and video rendering.
+
+## Review fixes (2026-11-10)
+
+An external review of commit dc99086 found three faults in the evaluation path. All three were real.
+
+1. The contact summary was cached per env step only, so after a reset or target change inside the step it still described the previous target. Rewards were unaffected (they are computed first), but the logged success metrics and one critic observation were. The cache is now also keyed on a command version, and an env that restarts inside a step contributes nothing to its new episode's statistics for that step.
+2. The whole-hand sensor kept eight contacts and overflow was silent, and contact was read once per policy step. It now keeps sixteen, overflow is detected and fails the step, and unwanted force is checked every substep.
+3. `rl_eval.py` ignored early terminations, so a rollout that ended and was auto-reset could be scored on what happened afterwards. Such rollouts are now failures and their count is reported.
 
 ## Train on CARC
 
@@ -64,6 +84,6 @@ sbatch slurm/fret_train.sbatch
 sbatch --export=ALL,CHECKPOINT=logs/rsl_rl/strum_fret/<run>/model_2999.pt,SPLIT=train slurm/fret_eval.sbatch
 ```
 
-Curves to watch in W&B (project `strum-on-cue`): `Metrics/chord/transition_success`, `Metrics/chord/clean_success`, `Metrics/chord/chord_ok`, `Episode_Reward/chord_ok`, `Episode_Reward/unwanted`. Training metrics use the noisy exploring policy, so they sit below what `rl_eval.py` reports for the same checkpoint.
+Curves to watch in W&B (project `strum-on-cue`): `Metrics/chord/transition_success`, `Metrics/chord/clean_success`, `Metrics/chord/chord_ok`, `Episode_Reward/chord_ok`, `Episode_Reward/unwanted`, `Episode_Metrics/substep_unwanted` (fraction of substeps with unwanted contact). Training metrics use the noisy exploring policy, so they sit below what `rl_eval.py` reports for the same checkpoint.
 
 Do not run `SPLIT=heldout` until rewards, observations and training length are frozen. Any change made after looking at held-out numbers invalidates them as a test.

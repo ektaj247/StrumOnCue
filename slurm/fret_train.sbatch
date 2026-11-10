@@ -32,6 +32,9 @@ cd "$PROJECT_DIR"
 echo "host: $(hostname)   commit: $(git rev-parse --short HEAD)   start: $(date)"
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
+# Stop here if the contact bookkeeping is broken on this machine.
+"$PY" scripts/rl_selfcheck.py
+
 "$PY" scripts/rl_train.py Strum-Fret-Shadow \
   --env.scene.num-envs "${NUM_ENVS:-4096}" \
   --agent.max-iterations "${ITERATIONS:-3000}" \

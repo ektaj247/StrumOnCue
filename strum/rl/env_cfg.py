@@ -2,6 +2,7 @@
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as base_mdp
 from mjlab.managers.event_manager import EventTermCfg
+from mjlab.managers.metrics_manager import MetricsTermCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
 from mjlab.managers.reward_manager import RewardTermCfg
 from mjlab.managers.termination_manager import TerminationTermCfg
@@ -28,7 +29,7 @@ def _sensors():
     strings = tuple(tip(name, 'string_' + name[-1]) for name in mdp.STRING_SENSORS)
     whole_hand = ContactSensorCfg(name=mdp.HAND_SENSOR,
                                   primary=ContactMatch(mode='subtree', pattern='lh_forearm', entity='hand'),
-                                  fields=('found', 'force'), reduce='maxforce', num_slots=8)
+                                  fields=('found', 'force'), reduce='maxforce', num_slots=16)
     return strings + (tip(mdp.NECK_SENSOR, 'neck'), whole_hand)
 
 
@@ -61,6 +62,7 @@ def make_fret_env_cfg(play: bool = False, split: str = 'train') -> ManagerBasedR
             'unwanted': RewardTermCfg(func=mdp.unwanted_contact, weight=-1.),
             'action_rate': RewardTermCfg(func=base_mdp.action_rate_l2, weight=-.01),
         },
+        metrics={'substep_unwanted': MetricsTermCfg(func=mdp.substep_unwanted, per_substep=True)},
         terminations={'time_out': TerminationTermCfg(func=base_mdp.time_out, time_out=True),
                       'nan': TerminationTermCfg(func=base_mdp.nan_detection)},
         viewer=ViewerConfig(origin_type=ViewerConfig.OriginType.ASSET_ROOT, entity_name='ukulele',

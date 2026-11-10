@@ -1,5 +1,9 @@
 # Distal coupling and fingertip-space planner: holds and training transitions
 
+> **Rule in force for these results (historical).** Everything below was measured on 2026-11-09 under the strict rule in which any neck contact of 0.01 N or more is unwanted. Later the same day the rule was changed to allow an assigned fingertip on the fretboard inside its own fret (see `docs/rl-fretting.md`). The "Open decision" section at the end is therefore closed. The 10/10 training-transition result holds under both rules.
+>
+> The hand is the upstream Shadow Hand **modified** with a J1 = J2 coupling per finger, not the unchanged upstream model.
+
 Local validation: 2026-11-09, native MuJoCo 3.1.4 (Linux arm64 CPU). The same commands were re-run unchanged on MuJoCo 4.0.0 with identical pass/fail outcomes. Not yet run on CARC or under mujoco_warp.
 
 These are development results for a scripted controller on a fixed mount. They are not benchmark scores, not a robustness estimate, and no learning is involved. The two held-out transitions (Am→G, F→C) were not executed.
