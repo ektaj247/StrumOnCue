@@ -14,7 +14,7 @@ import mujoco
 import numpy as np
 
 from .planner import DEPTHS, HOVER, TIMES, Hand, couple_distal
-from .ukulele import STRING_NAMES, classify_contact, profile
+from .ukulele import STRING_NAMES, classify_contact, fret_positions, profile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,8 +63,18 @@ def load(scene, presentation=None):
     return m, d
 
 
+# A fretting fingertip may rest on the fretboard inside its own fret, as a
+# real finger does. Wrong strings, wrong frets, other fingers and every other
+# hand contact still count as unwanted.
+FRETBOARD_RULE = 'assigned fingertip may touch the fretboard within its own fret'
+
+
 def contact_forces(m, d, p, fingering):
     uke = m.body('ukulele').id
+    neck = m.geom('neck').id
+    edges = [0.] + fret_positions(p.scale_length, p.n_frets)
+    own_fret = {frozenset((neck, m.geom('lh_' + f.lower() + 'distal_geom_1').id)): (edges[n - 1], edges[n])
+                for f, _, n in fingering}
     hand = {i for i in range(m.ngeom)
             if m.body(int(m.geom_bodyid[i])).name.startswith(('lh_', 'strum_rh_'))}
     assignments = {frozenset((m.geom('string_' + s).id,
@@ -84,6 +94,8 @@ def contact_forces(m, d, p, fingering):
         assignment = assignments.get(pair)
         if assignment and classify_contact(p, point) == assignment:
             forces[assignment[0]] += force
+        elif pair in own_fret and own_fret[pair][0] < point[0] < own_fret[pair][1]:
+            continue
         else:
             unwanted += force
             if force >= .01:
@@ -185,14 +197,14 @@ def calibrate(a):
     p = profile(a.profile)
     a.output.mkdir(parents=True, exist_ok=False)
     report = {'scope': 'Fixed-mount chords reached from the rest pose, then initialized holds; no chord transitions, strumming, robustness, or RL.',
-              'planner': 'ik', 'distal_coupling': True, 'hover_m': HOVER, 'approach_times_s': TIMES,
+              'planner': 'ik', 'distal_coupling': True, 'fretboard_rule': FRETBOARD_RULE, 'hover_m': HOVER, 'approach_times_s': TIMES,
               'profile': a.profile, 'parameters': p.to_dict(), 'mujoco_version': mujoco.__version__,
               'force_threshold_N': .01, 'settle_s': .5, 'required_hold_fraction': .95,
               'thresholds_provisional': True, 'chords': {}}
     previous = None
     if a.resume_from:
         previous = json.loads((a.resume_from / 'summary.json').read_text())
-        for field in ('profile', 'parameters', 'mujoco_version', 'force_threshold_N', 'settle_s', 'required_hold_fraction', 'planner', 'hover_m', 'approach_times_s'):
+        for field in ('profile', 'parameters', 'mujoco_version', 'force_threshold_N', 'settle_s', 'required_hold_fraction', 'planner', 'hover_m', 'approach_times_s', 'fretboard_rule'):
             if previous.get(field) != report[field]:
                 raise ValueError('Resume settings differ: ' + field)
     mount_reference = None

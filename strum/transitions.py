@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import mujoco
 import numpy as np
 
-from .fretting import ROOT, load, contact_forces, save_json
+from .fretting import FRETBOARD_RULE, ROOT, load, contact_forces, save_json
 from .ukulele import profile
 
 
@@ -70,7 +70,7 @@ def run(a):
               'route':route,'rollout_reset_count':1,'state_overwrites_after_start':0,'cycles_requested':a.cycles,
               'force_threshold_N':.01,'required_hold_fraction':.95,'hold_settle_s':.5,
               'thresholds_provisional':True,'planner':source.get('planner','legacy'),'time_scale':time_scale,'approach_proximal':a.approach_proximal,'approach_tendon':a.approach_tendon,
-              'rules':'Moves permit source/destination intended contacts and contact gaps. Holds require >=95% simultaneous contact after .5s; all phases require no unwanted force >=.01N over their evaluated samples.',
+              'rules':'Moves permit source/destination intended contacts and contact gaps. Holds require >=95% simultaneous contact after .5s; all phases require no unwanted force >=.01N over their evaluated samples. Fretboard: '+FRETBOARD_RULE+'.',
               'phases':[]}
     rows = []
     invalid = False
