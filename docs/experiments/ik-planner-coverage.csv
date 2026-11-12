@@ -1,0 +1,11 @@
+source,destination,pass,destination_hold_fraction,destination_unwanted_fraction,failed_phases,error
+Am,C,True,1.0,0.0,,
+Am,F,True,1.0,0.0,,
+C,Am,True,1.0,0.0,,
+C,F,True,1.0,0.0,,
+C,G,True,1.0,0.0,,
+F,Am,True,1.0,0.0,,
+F,G,True,1.0,0.0,,
+G,Am,True,1.0,0.0,,
+G,C,True,1.0,0.0,,
+G,F,True,1.0,0.0,,

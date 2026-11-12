@@ -1,0 +1,1 @@
+"""Shared StrumOnCue instrument geometry."""
