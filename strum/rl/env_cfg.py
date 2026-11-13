@@ -50,7 +50,8 @@ def make_fret_env_cfg(play: bool = False, split: str = 'train') -> ManagerBasedR
         observations={'actor': ObservationGroupCfg(actor, enable_corruption=not play),
                       'critic': ObservationGroupCfg(critic, enable_corruption=False)},
         actions={'fingers': mdp.FretActionCfg(entity_name='hand')},
-        commands={'chord': mdp.ChordCommandCfg(resampling_time_range=(2.5, 3.5), split=split)},
+        commands={'chord': mdp.ChordCommandCfg(resampling_time_range=(2.5, 3.5), split=split,
+                                               hold_probability=.25 if split == 'train' and not play else 0.)},
         events={'reset_to_chord': EventTermCfg(func=mdp.reset_to_chord, mode='reset',
                                                params={'noise': 0. if play else .02})},
         rewards={
@@ -82,9 +83,12 @@ def make_fret_env_cfg(play: bool = False, split: str = 'train') -> ManagerBasedR
 def fret_ppo_cfg() -> RslRlOnPolicyRunnerCfg:
     return RslRlOnPolicyRunnerCfg(
         actor=RslRlModelCfg(hidden_dims=(512, 256, 128), obs_normalization=True,
-                            distribution_cfg={'class_name': 'GaussianDistribution', 'init_std': .5, 'std_type': 'log'}),
+                            # Exploration noise may shrink but not grow: in the first run it rose
+                            # from 0.5 to 3.1 under the entropy bonus.
+                            distribution_cfg={'class_name': 'GaussianDistribution', 'init_std': .5, 'std_type': 'log',
+                                              'std_range': [.02, .5]}),
         critic=RslRlModelCfg(hidden_dims=(512, 256, 128), obs_normalization=True),
-        algorithm=RslRlPpoAlgorithmCfg(entropy_coef=.003),
+        algorithm=RslRlPpoAlgorithmCfg(entropy_coef=.001),
         clip_actions=1.,
         experiment_name='strum_fret',
         wandb_project='strum-on-cue',

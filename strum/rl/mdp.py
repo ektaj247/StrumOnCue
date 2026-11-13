@@ -160,6 +160,14 @@ class ChordCommandCfg(CommandTermCfg):
     source_grace_s: float = 1.
     """After a switch, contacts of the previous chord are not counted as unwanted."""
     required_hold_fraction: float = .95
+    hold_probability: float = 0.
+    """Chance that a new target equals the current chord (training only).
+
+    A hold period starts with the chord already fretted, so the policy sees
+    what a correct chord is worth before it can reach one by itself. Hold
+    periods are not chord changes: they are scored separately and can never
+    stand in for a held-out change.
+    """
 
     def build(self, env: ManagerBasedRlEnv) -> 'ChordCommand':
         return ChordCommand(self, env)
@@ -183,7 +191,8 @@ class ChordCommand(CommandTerm):
         self.window_steps, self.window_ok = zeros(), zeros()
         self.period_unwanted = zeros(torch.bool)
         self._steps, self._ok_sum, self._periods, self._held, self._clean = zeros(), zeros(), zeros(), zeros(), zeros()
-        for name in ('chord_ok', 'transition_success', 'clean_success', 'unwanted_force', 'contact_overflow'):
+        self._holds, self._holds_held = zeros(), zeros()
+        for name in ('chord_ok', 'transition_success', 'clean_success', 'hold_success', 'unwanted_force', 'contact_overflow'):
             self.metrics[name] = zeros()
 
     @property
@@ -200,7 +209,7 @@ class ChordCommand(CommandTerm):
         self.source[env_ids] = start
         self.fresh[env_ids] = True
         self._restart_step[env_ids] = self._env.common_step_counter
-        for buffer in (self._steps, self._ok_sum, self._periods, self._held, self._clean):
+        for buffer in (self._steps, self._ok_sum, self._periods, self._held, self._clean, self._holds, self._holds_held):
             buffer[env_ids] = 0.
         return start
 
@@ -227,6 +236,7 @@ class ChordCommand(CommandTerm):
         self.metrics['unwanted_force'][:] = state['unwanted']
         self.metrics['transition_success'][:] = self._held / self._periods.clamp(min=1.)
         self.metrics['clean_success'][:] = self._clean / self._periods.clamp(min=1.)
+        self.metrics['hold_success'][:] = self._holds_held / self._holds.clamp(min=1.)
 
     def _resample_command(self, env_ids: torch.Tensor) -> None:
         self.version += 1
@@ -234,9 +244,12 @@ class ChordCommand(CommandTerm):
         old = env_ids[~self.fresh[env_ids]]
         if len(old):
             held, clean = self.period_result()
-            self._periods[old] += 1.
-            self._held[old] += held[old]
-            self._clean[old] += clean[old]
+            moved = self.source[old] != self.target[old]
+            self._periods[old] += moved
+            self._held[old] += held[old] & moved
+            self._clean[old] += clean[old] & moved
+            self._holds[old] += ~moved
+            self._holds_held[old] += held[old] & ~moved
             self.source[old] = self.target[old]
         first = self.fresh[env_ids]
         self.fresh[env_ids] = False
@@ -245,7 +258,8 @@ class ChordCommand(CommandTerm):
         pick = (torch.rand(len(env_ids), device=self.device) * count).long().clamp(max=self._next.shape[1] - 1)
         chosen = self._next[source, pick]
         # A chord with no allowed successor in this split keeps its target.
-        self.target[env_ids] = torch.where(count > 0, chosen, source)
+        stay = torch.rand(len(env_ids), device=self.device) < self.cfg.hold_probability
+        self.target[env_ids] = torch.where((count > 0) & ~stay, chosen, source)
         if self.forced is not None:
             self.target[env_ids] = torch.where(first, self.forced[1][env_ids], self.target[env_ids])
         self.since_switch[env_ids] = 0.

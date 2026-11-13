@@ -49,6 +49,7 @@ def main():
     cfg.seed = a.seed
     cfg.scene.num_envs = len(todo) * a.rollouts
     cfg.commands['chord'].resampling_time_range = (a.period, a.period)
+    cfg.commands['chord'].hold_probability = 0.
     cfg.episode_length_s = 1e6
     agent = fret_ppo_cfg()
     env = RslRlVecEnvWrapper(ManagerBasedRlEnv(cfg=cfg, device=a.device), clip_actions=agent.clip_actions)
@@ -69,13 +70,25 @@ def main():
     first_ok = torch.full((base.num_envs,), float('nan'), device=a.device)
     ok_steps = torch.zeros(base.num_envs, device=a.device)
     ended = torch.zeros(base.num_envs, dtype=torch.bool, device=a.device)
+    # Diagnostics over the judged window: which finger is missing, and why.
+    finger_ok = torch.zeros(base.num_envs, 4, device=a.device)
+    pad_error = torch.zeros(base.num_envs, 4, device=a.device)
+    unwanted_steps = torch.zeros(base.num_envs, device=a.device)
+    judged = torch.zeros(base.num_envs, device=a.device)
     with torch.inference_mode():
         for step in range(steps):
             obs, _, dones, _ = env.step(policy(obs))
             # A rollout that ended early was reset by the env; whatever it does
             # afterwards belongs to a different rollout.
             ended |= dones.bool()
-            ok = mdp.contact_state(base)['chord_ok'] & ~ended
+            state = mdp.contact_state(base)
+            ok = state['chord_ok'] & ~ended
+            in_window = (term.time_left <= term.cfg.hold_window_s) & ~ended
+            error, assigned = mdp._pad_error(base)
+            finger_ok += (state['correct'] | ~assigned) * in_window[:, None]
+            pad_error += error.norm(dim=-1) * assigned * in_window[:, None]
+            unwanted_steps += (state['unwanted'] >= mdp.FORCE_THRESHOLD) & in_window
+            judged += in_window
             first_ok = torch.where(ok & first_ok.isnan(), torch.full_like(first_ok, (step + 1) * base.step_dt), first_ok)
             ok_steps += ok
     held, clean = term.period_result()
@@ -86,13 +99,20 @@ def main():
     assert ended.all() or window >= round(term.cfg.hold_window_s / base.step_dt) - 2, 'incomplete hold window'
 
     rows = []
+    scale = judged.clamp(min=1.)
     for i, (s, t) in enumerate(todo):
         mine = index == i
+        used = [f for f, _, _ in table['chords'][t]['fingering']]
+        fingers = {f: {'correct_fraction': round(float((finger_ok[mine, k] / scale[mine]).mean()), 3),
+                       'pad_error_mm': round(float((pad_error[mine, k] / scale[mine]).mean()) * 1000, 2)}
+                   for k, f in enumerate(mdp.FINGERS) if f in used}
         rows.append({'source': s, 'target': t, 'rollouts': int(mine.sum()), 'terminated': int(ended[mine].sum()),
                      'held': float(held[mine].float().mean()), 'clean': float(clean[mine].float().mean()),
                      'chord_ok_time_fraction': float((ok_steps[mine] / steps).mean()),
                      'reached': float((~first_ok[mine].isnan()).float().mean()),
-                     'median_time_to_chord_s': float(first_ok[mine].nanmedian()) if (~first_ok[mine].isnan()).any() else None})
+                     'median_time_to_chord_s': round(float(first_ok[mine].nanmedian()), 2) if (~first_ok[mine].isnan()).any() else None,
+                     'window_unwanted_fraction': round(float((unwanted_steps[mine] / scale[mine]).mean()), 3),
+                     'fingers': json.dumps(fingers)})
     with (a.output / 'results.csv').open('w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -106,6 +126,9 @@ def main():
     for row in rows:
         print(f"{row['source']:>2} -> {row['target']:<2}  held {row['held']:.3f}  clean {row['clean']:.3f}  "
               f"time to chord {row['median_time_to_chord_s']}")
+        if row['held'] < .95:
+            print(f"      in the last second: unwanted contact {row['window_unwanted_fraction']:.0%} of the time; "
+                  f"per finger {row['fingers']}")
     print(f"{a.split.upper()}: held {summary['held']:.3f}, clean {summary['clean']:.3f} over {base.num_envs} rollouts, "
           f"{summary['terminated']} terminated early")
     print('Saved', a.output / 'summary.json')

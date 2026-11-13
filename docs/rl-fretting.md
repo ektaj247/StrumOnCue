@@ -74,6 +74,44 @@ An external review of commit dc99086 found three faults in the evaluation path. 
 2. The whole-hand sensor kept eight contacts and overflow was silent, and contact was read once per policy step. It now keeps sixteen, overflow is detected and fails the step, and unwanted force is checked every substep.
 3. `rl_eval.py` ignored early terminations, so a rollout that ended and was auto-reset could be scored on what happened afterwards. Such rollouts are now failures and their count is reported.
 
+## Run log
+
+### Run 1, "pilot" (2026-11-10, W&B run koxffwpk, checkpoint `2026-11-10_01-57-50_pilot/model_2999.pt`)
+
+4096 environments, 3000 iterations, 1 h 46 min on one A40 (about 46,000 steps/s). Self-check passed on the GPU. No NaN terminations, no sensor overflow.
+
+Training-time metrics at the end (with exploration noise): chord correct 75.5% of the time, chord changes held 72.7%, clean 57.9%. Mean action noise rose from 0.50 to 3.10.
+
+`rl_eval.py --split train` (no exploration noise, 256 rollouts per chord change, CARC job 14035653):
+
+| Change | Held | Clean | Median time to chord |
+|---|---:|---:|---:|
+| Am→C | 1.000 | 0.863 | 0.08 s |
+| Am→F | 1.000 | 0.992 | 0.08 s |
+| C→Am | 1.000 | 0.863 | 0.08 s |
+| C→F | 0.988 | 0.840 | 0.10 s |
+| C→G | 0.000 | 0.000 | never |
+| F→Am | 1.000 | 0.988 | 0.02 s |
+| F→G | 0.000 | 0.000 | never |
+| G→Am | 1.000 | 0.863 | 0.02 s |
+| G→C | 1.000 | 0.828 | 0.08 s |
+| G→F | 0.992 | 0.621 | 0.06 s |
+| All | 0.798 | 0.686 | |
+
+Reading: the eight changes that do not end in G are held essentially every time. Both changes into G fail every time. G is the only three-finger chord and the only one where two fingers share a fret. Leaving G works, but those rollouts start with G already fretted.
+
+The times to chord are a few policy steps. The model's finger actuators can apply up to 1 N·m to links of a few grams, so fingers cross the fretboard in tens of milliseconds. That is a property of the upstream hand model, not evidence about a real hand, and it is why "clean" lags "held": fast moves clip a neighbouring string or finger on the way.
+
+The scripted planner is held and clean on all ten of these changes, so into-G is a learning problem, not a reachability problem.
+
+### Run 2 changes (2026-11-12)
+
+1. **Hold periods.** With probability 0.25 a new target equals the current chord. The episode then starts (or continues) with that chord already fretted, so the policy experiences a correct G and has to keep it, instead of having to discover a three-finger chord from scratch. In run 1 the policy was never asked to hold a chord it started in. Hold periods are scored as `Metrics/chord/hold_success` and are excluded from `transition_success` and `clean_success`. They are not chord changes and do not touch the held-out pairs.
+2. **Exploration noise capped.** Standard deviation limited to [0.02, 0.5] and entropy coefficient lowered from 0.003 to 0.001.
+3. **Evaluation diagnostics.** For any change held less than 95% of the time, `rl_eval.py` now prints, over the judged window, how often each required finger was correct, each fingertip's distance from where it sits in the calibrated chord, and how often there was unwanted contact.
+
+Two training changes at once, so run 2 cannot say which one mattered.
+
 ## Train on CARC
 
 ```bash
