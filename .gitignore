@@ -8,6 +8,8 @@ logs/
 
 # Private notes: never commit
 private/
+notebook.md
+Progress.md
 
 # Python
 __pycache__/

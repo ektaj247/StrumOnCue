@@ -1,6 +1,6 @@
-"""Geometry tests for the ukulele generator. Pure Python, no MuJoCo needed.
+"""Geometry tests for strum/ukulele.py. Pure Python, no MuJoCo needed.
 
-    python -m unittest discover -s tests -v
+    python -m unittest discover -s tests -t . -v
 """
 
 import unittest
@@ -16,21 +16,21 @@ class FretGeometry(unittest.TestCase):
         self.assertAlmostEqual(fret_positions(0.381, 1)[0] * 1000, 21.4, delta=0.1)
 
     def test_twelfth_fret_is_half_the_scale(self):
-        self.assertAlmostEqual(fret_positions(self.p.L, 12)[-1], self.p.L / 2, places=12)
+        self.assertAlmostEqual(fret_positions(self.p.scale_length, 12)[-1], self.p.scale_length / 2, places=12)
 
     def test_formula_within_a_tenth_of_a_millimetre(self):
-        for n, x in enumerate(fret_positions(self.p.L, 18), start=1):
-            self.assertAlmostEqual(x, self.p.L * (1 - 2 ** (-n / 12)), delta=1e-4)
+        for n, x in enumerate(fret_positions(self.p.scale_length, 18), start=1):
+            self.assertAlmostEqual(x, self.p.scale_length * (1 - 2 ** (-n / 12)), delta=1e-4)
 
     def test_frets_get_closer_by_one_semitone_ratio(self):
-        f = [0.0] + fret_positions(self.p.L, 18)
+        f = [0.0] + fret_positions(self.p.scale_length, 18)
         gaps = [b - a for a, b in zip(f, f[1:])]
         for g0, g1 in zip(gaps, gaps[1:]):
             self.assertAlmostEqual(g1 / g0, 2 ** (-1 / 12), places=9)
 
-    def test_scale_factor_scales_frets(self):
-        big = UkuleleParams(scale_factor=1.15)
-        for a, b in zip(fret_positions(self.p.L, 5), fret_positions(big.L, 5)):
+    def test_frets_scale_with_the_scale_length(self):
+        longer = 1.15 * self.p.scale_length
+        for a, b in zip(fret_positions(self.p.scale_length, 5), fret_positions(longer, 5)):
             self.assertAlmostEqual(b, 1.15 * a, places=12)
 
 
@@ -43,15 +43,15 @@ class StringsAndPressPoints(unittest.TestCase):
         self.assertAlmostEqual(gap * 1000, 29 / 3, places=6)
 
     def test_strings_are_symmetric_about_the_neck(self):
-        for x in (0.0, 0.1, self.p.L):
+        for x in (0.0, 0.1, self.p.scale_length):
             self.assertAlmostEqual(string_y(self.p, 0, x), -string_y(self.p, 3, x), places=12)
 
     def test_strings_clear_the_fret_crowns(self):
-        for x in fret_positions(self.p.L, 18):
-            self.assertGreater(string_z(self.p, x) - self.p.string_radius, self.p.fret_crown)
+        for x in fret_positions(self.p.scale_length, 18):
+            self.assertGreater(string_z(self.p, x) - self.p.string_radius, self.p.fret_top)
 
     def test_press_point_sits_between_its_frets(self):
-        frets = [0.0] + fret_positions(self.p.L, 5)
+        frets = [0.0] + fret_positions(self.p.scale_length, 5)
         for fret in range(1, 6):
             for s in range(4):
                 x, y, z = press_point(self.p, fret, s)
