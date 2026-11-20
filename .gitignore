@@ -1,9 +1,10 @@
-# Downloaded dependencies (fetch with: python scripts/fetch_menagerie.py)
+# Downloaded dependencies
 third_party/
 
-# Generated files (rebuild with: python -m strum.scene)
+# Generated files
 assets/*.xml
 outputs/
+logs/
 
 # Private notes: never commit
 private/
@@ -12,8 +13,11 @@ private/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-*/
 venv/
 *.egg-info/
+.pytest_cache/
+.ruff_cache/
 
 # MuJoCo
 MUJOCO_LOG.TXT
@@ -23,6 +27,8 @@ runs/
 wandb/
 checkpoints/
 *.pt
+*.pth
+*.ckpt
 slurm-*.out
 slurm-*.err
 slurm/local.env

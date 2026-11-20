@@ -1,0 +1,67 @@
+{
+  "scope": "Baseline seed poses only; transfer requires recalibration and hold screening.",
+  "candidates": [
+    {
+      "mount": "x_30",
+      "selected_chords": [
+        "C",
+        "Am",
+        "F",
+        "G3"
+      ],
+      "chords": {
+        "C": {
+          "fingering": [
+            [
+              "RF",
+              "A",
+              3
+            ]
+          ]
+        },
+        "Am": {
+          "fingering": [
+            [
+              "MF",
+              "G",
+              2
+            ]
+          ]
+        },
+        "F": {
+          "fingering": [
+            [
+              "MF",
+              "G",
+              2
+            ],
+            [
+              "FF",
+              "E",
+              1
+            ]
+          ]
+        },
+        "G3": {
+          "fingering": [
+            [
+              "MF",
+              "C",
+              2
+            ],
+            [
+              "RF",
+              "E",
+              3
+            ],
+            [
+              "FF",
+              "A",
+              2
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}
